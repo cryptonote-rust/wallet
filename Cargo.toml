@@ -1,0 +1,16 @@
+[package]
+name = "wallet"
+version = "0.1.0"
+authors = ["calidion <calidion@gmail.com>"]
+edition = "2018"
+license = "GPL-3.0-or-later"
+description = "base58 for cryptonote"
+
+[dependencies]
+cryptonote-account = "0.1.3"
+cryptonote-currency = "0.1.0"
+cryptonote-varint = "0.1.0"
+
+[badges]
+travis-ci = { repository = "cryptonote-rust/wallet", branch = "master" }
+codecov = { repository = "cryptonote-rust/wallet", branch = "master", service = "github" }
