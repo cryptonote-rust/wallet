@@ -24,11 +24,13 @@ impl Wallet {
     let mut buffered = BufReader::new(input);
     let version: u64 = varint::read(&mut buffered);
     let mut iv: [u8;8] = [0;8];
-    buffered.read_exact(&mut iv[..]).expect("Failed to read");
+    buffered.read_exact(&mut iv[..]).expect("Failed to read iv!");
     let cipher_len: u64 = varint::read(&mut buffered);
     println!("version is : {}", version);
     println!("iv is : {:x?}", iv);
     println!("len is : {}", cipher_len);
+    let mut cipher = vec![0; cipher_len as usize];
+    buffered.read_exact(&mut cipher[..]).expect("Failed to read cipher!");
   }
 }
 
