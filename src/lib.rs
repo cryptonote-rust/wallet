@@ -1,12 +1,13 @@
 use chrono::{NaiveDate, NaiveDateTime};
 use chrono::{TimeZone, Utc};
-use cryptonote_account::Account;
+use cryptonote_account::{Account, Address};
 use cryptonote_raw_crypto::{Chacha, ChachaIV, ChachaKey};
 use cryptonote_currency::Currency;
 use cryptonote_varint as varint;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::rc::Rc;
+use ed25519_dalek::{PublicKey, SecretKey, Keypair};
 
 pub struct Wallet {
   account: Option<Account>,
@@ -21,14 +22,41 @@ impl Wallet {
     }
   }
 
+  pub fn parseKey(r: & mut Read) -> [u8; 32]{
+    let mut key: [u8; 32] = [0; 32];
+    r.read_exact(&mut key).unwrap();
+    key
+  }
+
   pub fn prase(buffer: &[u8]) {
     let mut buffered = BufReader::new(buffer);
-    let createtime: u64 = varint::read(buffered);
+    let createtime: u64 = varint::read(& mut buffered);
     println!("{}", createtime);
 
     let datetime = NaiveDateTime::from_timestamp(createtime as i64, 0);
+
+    // let cursor = BufReader<Cursor>
     println!("{}", createtime);
     println!("{}", datetime.format("%Y-%m-%d %H:%M:%S"));
+
+    let spend_public_key = Wallet::parseKey(& mut buffered);
+    let spend_private_key = Wallet::parseKey(& mut buffered);
+    let view_public_key = Wallet::parseKey(& mut buffered);
+    let view_private_key = Wallet::parseKey(& mut buffered);
+    println!("{:?}", spend_public_key);
+    println!("{:?}", spend_private_key);
+    println!("{:?}", view_public_key);
+    println!("{:?}", view_private_key);
+    let spend_prik: SecretKey = SecretKey::from_bytes(&spend_private_key).unwrap();
+    let view_prik: SecretKey = SecretKey::from_bytes(&view_private_key).unwrap();
+    let spend_pubk: PublicKey = PublicKey::from_bytes(&spend_public_key).unwrap();
+    let view_pubk: PublicKey = PublicKey::from_bytes(&view_public_key).unwrap();
+    // let into_spend_pubk: PublicKey = (&spend_prik).into();
+    // let into_view_pubk: PublicKey = (&view_prik).into();
+    // assert!(into_spend_pubk.to_bytes() == spend_public_key);
+    // assert!(into_view_pubk.to_bytes() == view_public_key);
+    let address = Address::new(0x3d, spend_pubk, view_pubk);
+    println!("{}", address.get());
   }
 
   pub fn load(file: String, password: &str) {
