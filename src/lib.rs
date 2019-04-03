@@ -33,10 +33,10 @@ impl Wallet {
     key
   }
 
-  pub fn to_address(&self) -> Address {
+  pub fn to_address(&self, prefix: u64) -> Address {
     let spend_pubk: PublicKey = PublicKey::from_bytes(&self.spend_keys.1).unwrap();
     let view_pubk: PublicKey = PublicKey::from_bytes(&self.view_keys.1).unwrap();
-    let address = Address::new(0x3d, spend_pubk, view_pubk);
+    let address = Address::new(prefix, spend_pubk, view_pubk);
     address
   }
 
@@ -112,12 +112,13 @@ mod tests {
   #[test]
 
   fn should_read() {
+    let prefix: u64 = 0x3d;
     let mut wallet = Wallet::new();
     wallet.load(String::from("tests/vig.wallet"), String::from(""));
-    let address = wallet.to_address();
+    let address = wallet.to_address(prefix);
     let mut wallet1 = Wallet::new();
     wallet1.load(String::from("tests/vig-enc.wallet"), String::from("abcd$1234"));
-    let address1 = wallet1.to_address();
+    let address1 = wallet1.to_address(prefix);
     assert!(address.get() == address1.get());
 
     wallet.save(
