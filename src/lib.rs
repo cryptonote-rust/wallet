@@ -130,6 +130,9 @@ mod tests {
     let mut wallet2 = Wallet::new();
     wallet2.load(String::from("tests/vig-enc-new.wallet"), String::from(""));
 
+    let mut wallet2 = Wallet::new();
+    wallet2.load(String::from("tests/vig-new.wallet"), String::from("abcd$1234"));
+
     assert!(wallet.version == wallet2.version);
     assert!(wallet.spend_keys == wallet2.spend_keys);
     assert!(wallet.view_keys == wallet2.view_keys);
