@@ -1,11 +1,11 @@
+use chrono::{DateTime, Utc};
 use cryptonote_account::Address;
-use cryptonote_raw_crypto::{Chacha, ChachaIV, ChachaKey, secret_to_public};
+use cryptonote_raw_crypto::{secret_to_public, Chacha, ChachaIV, ChachaKey};
 use cryptonote_varint as varint;
-use ed25519_dalek::{PublicKey, SecretKey, Keypair};
+use ed25519_dalek::{Keypair, PublicKey, SecretKey};
+use hex;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
-use chrono::{DateTime, Utc};
-
 
 type Keys = ([u8; 32], [u8; 32]);
 pub struct Wallet {
@@ -45,7 +45,7 @@ impl Wallet {
     let mut pair: Vec<u8> = vec![];
     pair.extend(&public_bytes);
     pair.extend(&secret_bytes);
-    let key_pair : Keypair = Keypair::from_bytes(&pair).expect("Error Key Pair");
+    let key_pair: Keypair = Keypair::from_bytes(&pair).expect("Error Key Pair");
     key_pair
   }
 
@@ -131,7 +131,23 @@ impl Wallet {
     Wallet::from_pair((spend, spend_pub), (view, view_pub))
   }
 
-  pub fn from_pair(spend_keys: Keys, view_keys: Keys) -> Wallet{
+  fn to_fixed_key(bytes: &[u8]) -> [u8; 32] {
+    let mut key: [u8; 32] = [0; 32];
+    for i in 0..32 {
+      key[i] = bytes[i];
+    }
+    key
+  }
+
+  pub fn from_secret_string(spend_str: String, view_str: String) -> Wallet {
+    let spend_slice = hex::decode(spend_str).expect("Wrong spend str!");
+    let view_slice = hex::decode(view_str).expect("Wrong view str");
+    let spend: [u8; 32] = Wallet::to_fixed_key(&spend_slice[..]);
+    let view: [u8; 32] = Wallet::to_fixed_key(&view_slice[..]);
+    Wallet::from_secret_keys(spend, view)
+  }
+
+  pub fn from_pair(spend_keys: Keys, view_keys: Keys) -> Wallet {
     let chacha_iv = ChachaIV::new();
     let iv = chacha_iv.data;
     Wallet {
@@ -140,7 +156,7 @@ impl Wallet {
       loaded: true,
       iv,
       spend_keys,
-      view_keys
+      view_keys,
     }
   }
 }
@@ -148,7 +164,7 @@ impl Wallet {
 #[cfg(test)]
 mod tests {
   use super::Wallet;
-  use ed25519_dalek::{PublicKey, SecretKey, Keypair};
+  use ed25519_dalek::{Keypair, PublicKey, SecretKey};
 
   #[test]
 
@@ -158,7 +174,10 @@ mod tests {
     wallet.load(String::from("tests/vig.wallet"), String::from(""));
     let address = wallet.to_address(prefix);
     let mut wallet1 = Wallet::new();
-    wallet1.load(String::from("tests/vig-enc.wallet"), String::from("abcd$1234"));
+    wallet1.load(
+      String::from("tests/vig-enc.wallet"),
+      String::from("abcd$1234"),
+    );
     let address1 = wallet1.to_address(prefix);
     assert!(address.get() == address1.get());
 
@@ -172,7 +191,10 @@ mod tests {
     wallet2.load(String::from("tests/vig-enc-new.wallet"), String::from(""));
 
     let mut wallet2 = Wallet::new();
-    wallet2.load(String::from("tests/vig-new.wallet"), String::from("abcd$1234"));
+    wallet2.load(
+      String::from("tests/vig-new.wallet"),
+      String::from("abcd$1234"),
+    );
 
     assert!(wallet.version == wallet2.version);
     assert!(wallet.spend_keys == wallet2.spend_keys);
@@ -185,5 +207,11 @@ mod tests {
     let wallet3 = Wallet::from_secret_keys(spend, view);
     let address3 = wallet3.to_address(prefix);
     assert!(address3.get() == address1.get());
+    let spend_str = "f644de91c7defae58ff9136dcc8b03a2059fda3294865065f86554d3aaeb310c";
+    let view_str = "3dd9d71a6fe2b909e1603c9ac325f13f2c6ac965e7e1ec98e5e666ed84b4d40c";
+    println!("before from secret string");
+    let wallet = Wallet::from_secret_string(String::from(spend_str), String::from(view_str));
+    let address = wallet.to_address(prefix);
+    assert!(address.get() == "BM5A1ACoB4Af9ZuaJwTjHE37zowNmSp2nP2FjUZkm4u2LVo2UPXvMnW7xRhf9C7mJcBcLu5n9W3ArU69SKBS6azrMfn6NBH");
   }
 }
