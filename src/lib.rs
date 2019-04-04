@@ -1,7 +1,7 @@
 use cryptonote_account::Address;
 use cryptonote_raw_crypto::{Chacha, ChachaIV, ChachaKey};
 use cryptonote_varint as varint;
-use ed25519_dalek::PublicKey;
+use ed25519_dalek::{PublicKey, SecretKey, Keypair};
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 
@@ -33,6 +33,14 @@ impl Wallet {
     key
   }
 
+  pub fn to_key_pair(secret_bytes: [u8; 32], public_bytes: [u8; 32]) -> Keypair {
+    let mut pair: Vec<u8> = vec![];
+    pair.extend(&public_bytes);
+    pair.extend(&secret_bytes);
+    let key_pair : Keypair = Keypair::from_bytes(&pair).expect("Error Key Pair");
+    key_pair
+  }
+
   pub fn to_address(&self, prefix: u64) -> Address {
     let spend_pubk: PublicKey = PublicKey::from_bytes(&self.spend_keys.1).unwrap();
     let view_pubk: PublicKey = PublicKey::from_bytes(&self.view_keys.1).unwrap();
@@ -52,6 +60,8 @@ impl Wallet {
     self.spend_keys = (spend_private_key, spend_public_key);
     self.view_keys = (view_private_key, view_public_key);
   }
+
+  // pub fn from_private_keys()
 
   pub fn load(&mut self, file: String, password: String) {
     let input = File::open(file).expect("File not found!");
@@ -108,6 +118,7 @@ impl Wallet {
 #[cfg(test)]
 mod tests {
   use super::Wallet;
+  use ed25519_dalek::{PublicKey, SecretKey, Keypair};
 
   #[test]
 
@@ -137,5 +148,15 @@ mod tests {
     assert!(wallet.spend_keys == wallet2.spend_keys);
     assert!(wallet.view_keys == wallet2.view_keys);
     assert!(wallet.createtime == wallet2.createtime);
+
+    let key_pair = Wallet::to_key_pair(wallet2.spend_keys.0, wallet2.spend_keys.1);
+
+    let secret_key: SecretKey = SecretKey::from_bytes(&wallet2.spend_keys.0).expect("Error secret key!");
+
+    let public_from_secret: PublicKey = (&secret_key).into(); // XXX eww
+    println!("{:?}", wallet2.spend_keys.1);
+    println!("{:?}", public_from_secret.to_bytes());
+    let key_pair = Wallet::to_key_pair(wallet2.spend_keys.0, public_from_secret.to_bytes());
+    // assert!(public_from_secret.to_bytes() == wallet2.spend_keys.1);
   }
 }
