@@ -1,9 +1,11 @@
 use cryptonote_account::Address;
-use cryptonote_raw_crypto::{Chacha, ChachaIV, ChachaKey};
+use cryptonote_raw_crypto::{Chacha, ChachaIV, ChachaKey, secret_to_public};
 use cryptonote_varint as varint;
 use ed25519_dalek::{PublicKey, SecretKey, Keypair};
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
+use chrono::{DateTime, Utc};
+
 
 type Keys = ([u8; 32], [u8; 32]);
 pub struct Wallet {
@@ -25,6 +27,12 @@ impl Wallet {
       iv: [0; 8],
       loaded: false,
     }
+  }
+
+  fn timestamp() -> u64 {
+    let now: DateTime<Utc> = Utc::now();
+    let now = now.timestamp() as u64;
+    now
   }
 
   pub fn parse_key(r: &mut Read) -> [u8; 32] {
@@ -56,6 +64,9 @@ impl Wallet {
     let spend_private_key = Wallet::parse_key(&mut buffered);
     let view_public_key = Wallet::parse_key(&mut buffered);
     let view_private_key = Wallet::parse_key(&mut buffered);
+
+    println!("public key: {:?}", spend_public_key);
+    println!("private key: {:?}", spend_private_key);
 
     self.spend_keys = (spend_private_key, spend_public_key);
     self.view_keys = (view_private_key, view_public_key);
@@ -113,6 +124,25 @@ impl Wallet {
     varint::write(&mut buffered, cipher.len() as u64);
     buffered.write(&cipher).expect("Error write cipher!");
   }
+
+  pub fn from_secret_keys(spend: [u8; 32], view: [u8; 32]) -> Wallet {
+    let spend_pub = secret_to_public(&spend);
+    let view_pub = secret_to_public(&view);
+    Wallet::from_pair((spend, spend_pub), (view, view_pub))
+  }
+
+  pub fn from_pair(spend_keys: Keys, view_keys: Keys) -> Wallet{
+    let chacha_iv = ChachaIV::new();
+    let iv = chacha_iv.data;
+    Wallet {
+      version: 1,
+      createtime: Wallet::timestamp(),
+      loaded: true,
+      iv,
+      spend_keys,
+      view_keys
+    }
+  }
 }
 
 #[cfg(test)]
@@ -149,14 +179,11 @@ mod tests {
     assert!(wallet.view_keys == wallet2.view_keys);
     assert!(wallet.createtime == wallet2.createtime);
 
-    let key_pair = Wallet::to_key_pair(wallet2.spend_keys.0, wallet2.spend_keys.1);
+    let spend = wallet.spend_keys.0;
+    let view = wallet.view_keys.0;
 
-    let secret_key: SecretKey = SecretKey::from_bytes(&wallet2.spend_keys.0).expect("Error secret key!");
-
-    let public_from_secret: PublicKey = (&secret_key).into(); // XXX eww
-    println!("{:?}", wallet2.spend_keys.1);
-    println!("{:?}", public_from_secret.to_bytes());
-    let key_pair = Wallet::to_key_pair(wallet2.spend_keys.0, public_from_secret.to_bytes());
-    // assert!(public_from_secret.to_bytes() == wallet2.spend_keys.1);
+    let wallet3 = Wallet::from_secret_keys(spend, view);
+    let address3 = wallet3.to_address(prefix);
+    assert!(address3.get() == address1.get());
   }
 }
