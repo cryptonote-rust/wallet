@@ -10,7 +10,7 @@
 
 ## Usage
 
-1. load and save
+1. load and save wallet
 
 ```
     // Create a wallet object
@@ -34,4 +34,18 @@
     let addressStr = address.get();
     println!("{}" , addressStr);
     
+```
+
+3. from secret keys
+```
+    let spend = b"f644de91c7defae58ff9136dcc8b03a2059fda3294865065f86554d3aaeb310c";
+    let view = b"3dd9d71a6fe2b909e1603c9ac325f13f2c6ac965e7e1ec98e5e666ed84b4d40c";
+    let wallet = Wallet::from_secret_keys(spend, view);
+```
+
+4. from secret strings
+```
+    let spend_str = "f644de91c7defae58ff9136dcc8b03a2059fda3294865065f86554d3aaeb310c";
+    let view_str = "3dd9d71a6fe2b909e1603c9ac325f13f2c6ac965e7e1ec98e5e666ed84b4d40c";
+    let wallet = Wallet::from_secret_string(String::from(spend_str), String::from(view_str));
 ```
