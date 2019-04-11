@@ -78,9 +78,6 @@ impl Wallet {
       panic!("Wrong view keys!");
     }
 
-    println!("public key: {:?}", spend_public_key);
-    println!("private key: {:?}", spend_private_key);
-
     self.spend_keys = (spend_private_key, spend_public_key);
     self.view_keys = (view_private_key, view_public_key);
   }
