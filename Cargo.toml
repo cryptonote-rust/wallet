@@ -11,7 +11,7 @@ exclude = [
 ]
 
 [dependencies]
-cryptonote-account = "0.1.3"
+cryptonote-account = "0.1.4"
 cryptonote-currency = "0.1.0"
 cryptonote-varint = "0.1.0"
 cryptonote-raw-crypto = "0.1.2"

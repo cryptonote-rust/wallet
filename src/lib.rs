@@ -41,6 +41,11 @@ impl Wallet {
     key
   }
 
+  pub fn check(secret: [u8; 32], public: [u8; 32]) -> bool {
+    let generated_pub = secret_to_public(&secret);
+    return public == generated_pub;
+  }
+
   pub fn to_key_pair(secret_bytes: [u8; 32], public_bytes: [u8; 32]) -> Keypair {
     let mut pair: Vec<u8> = vec![];
     pair.extend(&public_bytes);
@@ -62,8 +67,16 @@ impl Wallet {
     self.createtime = createtime;
     let spend_public_key = Wallet::parse_key(&mut buffered);
     let spend_private_key = Wallet::parse_key(&mut buffered);
+    if !Wallet::check(spend_private_key, spend_public_key) {
+      panic!("Wrong spend keys!");
+    }
+
     let view_public_key = Wallet::parse_key(&mut buffered);
     let view_private_key = Wallet::parse_key(&mut buffered);
+
+    if !Wallet::check(spend_private_key, spend_public_key) {
+      panic!("Wrong view keys!");
+    }
 
     println!("public key: {:?}", spend_public_key);
     println!("private key: {:?}", spend_private_key);
@@ -221,6 +234,13 @@ mod tests {
     let prefix: u64 = 0x3d;
     let mut wallet0 = Wallet::new();
     wallet0.load(String::from("tests/vig.wallet"), String::from("aaaa"));
-    let address0 = wallet0.to_address(prefix);
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_wrong_file() {
+    let prefix: u64 = 0x3d;
+    let mut wallet0 = Wallet::new();
+    wallet0.load(String::from("tests/vig1.wallet"), String::from("sssss"));
   }
 }
