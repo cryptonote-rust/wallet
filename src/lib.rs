@@ -167,12 +167,12 @@ mod tests {
   use ed25519_dalek::{Keypair, PublicKey, SecretKey};
 
   #[test]
-
   fn should_read() {
     let prefix: u64 = 0x3d;
     let mut wallet = Wallet::new();
     wallet.load(String::from("tests/vig.wallet"), String::from(""));
     let address = wallet.to_address(prefix);
+
     let mut wallet1 = Wallet::new();
     wallet1.load(
       String::from("tests/vig-enc.wallet"),
@@ -213,5 +213,14 @@ mod tests {
     let wallet = Wallet::from_secret_string(String::from(spend_str), String::from(view_str));
     let address = wallet.to_address(prefix);
     assert!(address.get() == "BM5A1ACoB4Af9ZuaJwTjHE37zowNmSp2nP2FjUZkm4u2LVo2UPXvMnW7xRhf9C7mJcBcLu5n9W3ArU69SKBS6azrMfn6NBH");
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_wrong_load() {
+    let prefix: u64 = 0x3d;
+    let mut wallet0 = Wallet::new();
+    wallet0.load(String::from("tests/vig.wallet"), String::from("aaaa"));
+    let address0 = wallet0.to_address(prefix);
   }
 }
