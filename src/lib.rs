@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 use cryptonote_account::Address;
-use cryptonote_raw_crypto::{secret_to_public, Chacha, ChachaIV, ChachaKey};
+use cryptonote_raw_crypto::{generate_secret_key, secret_to_public, Chacha, ChachaIV, ChachaKey};
 use cryptonote_varint as varint;
-use ed25519_dalek::{Keypair, PublicKey, SecretKey};
+use ed25519_dalek::{Keypair, PublicKey};
+
 use hex;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
@@ -82,7 +83,23 @@ impl Wallet {
     self.view_keys = (view_private_key, view_public_key);
   }
 
-  // pub fn from_private_keys()
+  pub fn create_keys() -> ([u8;32], [u8;32]) {
+    let secret: [u8; 32] = generate_secret_key();
+    let public: [u8; 32] = secret_to_public(&secret);
+    return (secret, public);
+  }
+
+  pub fn create() -> Wallet {
+    let chacha_iv = ChachaIV::new();
+    Wallet {
+      version: 1,
+      spend_keys: Wallet::create_keys(),
+      view_keys: Wallet::create_keys(),
+      createtime: Wallet::timestamp(),
+      iv: chacha_iv.data,
+      loaded: true,
+    }
+  }
 
   pub fn load(&mut self, file: String, password: String) {
     let input = File::open(file).expect("File not found!");
@@ -174,7 +191,6 @@ impl Wallet {
 #[cfg(test)]
 mod tests {
   use super::Wallet;
-  use ed25519_dalek::{Keypair, PublicKey, SecretKey};
 
   #[test]
   fn should_read() {
@@ -225,10 +241,24 @@ mod tests {
     assert!(address.get() == "BM5A1ACoB4Af9ZuaJwTjHE37zowNmSp2nP2FjUZkm4u2LVo2UPXvMnW7xRhf9C7mJcBcLu5n9W3ArU69SKBS6azrMfn6NBH");
   }
 
+    #[test]
+  fn should_create() {
+    let prefix: u64 = 0x3d;
+    let wallet = Wallet::create();
+    wallet.save(String::from("tests/created.wallet"), String::from(""));
+    let address = wallet.to_address(prefix);
+    
+    let mut wallet = Wallet::new();
+    wallet.load(String::from("tests/created.wallet"), String::from(""));
+    let address1 = wallet.to_address(prefix);
+
+    assert!(address.get() == address1.get());
+
+  }
+
   #[test]
   #[should_panic]
   fn test_wrong_load() {
-    let prefix: u64 = 0x3d;
     let mut wallet0 = Wallet::new();
     wallet0.load(String::from("tests/vig.wallet"), String::from("aaaa"));
   }
@@ -236,7 +266,6 @@ mod tests {
   #[test]
   #[should_panic]
   fn test_wrong_file() {
-    let prefix: u64 = 0x3d;
     let mut wallet0 = Wallet::new();
     wallet0.load(String::from("tests/vig1.wallet"), String::from("sssss"));
   }
