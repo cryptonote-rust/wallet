@@ -83,7 +83,7 @@ impl Wallet {
     self.view_keys = (view_private_key, view_public_key);
   }
 
-  pub fn create_keys() -> ([u8;32], [u8;32]) {
+  pub fn create_keys() -> ([u8; 32], [u8; 32]) {
     let secret: [u8; 32] = generate_secret_key();
     let public: [u8; 32] = secret_to_public(&secret);
     return (secret, public);
@@ -150,6 +150,17 @@ impl Wallet {
     let cipher = chacha.encrypt(&plain);
     varint::write(&mut buffered, cipher.len() as u64);
     buffered.write(&cipher).expect("Error write cipher!");
+  }
+
+  pub fn update_secret_keys(&mut self, spend_str: String, view_str: String) {
+    let spend_slice = hex::decode(spend_str).expect("Wrong spend str!");
+    let view_slice = hex::decode(view_str).expect("Wrong view str");
+    let spend: [u8; 32] = Wallet::to_fixed_key(&spend_slice[..]);
+    let view: [u8; 32] = Wallet::to_fixed_key(&view_slice[..]);
+    let spend_pub = secret_to_public(&spend);
+    let view_pub = secret_to_public(&view);
+    self.spend_keys = (spend, spend_pub);
+    self.view_keys = (view, view_pub);
   }
 
   pub fn from_secret_keys(spend: [u8; 32], view: [u8; 32]) -> Wallet {
@@ -239,21 +250,28 @@ mod tests {
     let wallet = Wallet::from_secret_string(String::from(spend_str), String::from(view_str));
     let address = wallet.to_address(prefix);
     assert!(address.get() == "BM5A1ACoB4Af9ZuaJwTjHE37zowNmSp2nP2FjUZkm4u2LVo2UPXvMnW7xRhf9C7mJcBcLu5n9W3ArU69SKBS6azrMfn6NBH");
+
+    let mut wallet10 = Wallet::new();
+    let spend_str_10 = "f644de91c7defae58ff9136dcc8b03a2059fda3294865065f86554d3aaeb310c";
+    let view_str_10 = "3dd9d71a6fe2b909e1603c9ac325f13f2c6ac965e7e1ec98e5e666ed84b4d40c";
+    wallet10.update_secret_keys(String::from(spend_str_10), String::from(view_str_10));
+
+    let address10 = wallet10.to_address(prefix);
+    assert!(address10.get() == "BM5A1ACoB4Af9ZuaJwTjHE37zowNmSp2nP2FjUZkm4u2LVo2UPXvMnW7xRhf9C7mJcBcLu5n9W3ArU69SKBS6azrMfn6NBH");
   }
 
-    #[test]
+  #[test]
   fn should_create() {
     let prefix: u64 = 0x3d;
     let wallet = Wallet::create();
     wallet.save(String::from("tests/created.wallet"), String::from(""));
     let address = wallet.to_address(prefix);
-    
+
     let mut wallet = Wallet::new();
     wallet.load(String::from("tests/created.wallet"), String::from(""));
     let address1 = wallet.to_address(prefix);
 
     assert!(address.get() == address1.get());
-
   }
 
   #[test]
