@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use cryptonote_account::Address;
-use cryptonote_raw_crypto::{generate_secret_key, secret_to_public, Chacha, ChachaIV, ChachaKey};
+use cryptonote_raw_crypto::key::Key;
+use cryptonote_raw_crypto::chacha::*;
 use cryptonote_varint as varint;
 use ed25519_dalek::{Keypair, PublicKey};
 
@@ -36,15 +37,18 @@ impl Wallet {
     now
   }
 
-  pub fn parse_key(r: &mut Read) -> [u8; 32] {
+  pub fn parse_key(r: &mut dyn Read) -> [u8; 32] {
     let mut key: [u8; 32] = [0; 32];
     r.read_exact(&mut key).unwrap();
     key
   }
 
   pub fn check(secret: [u8; 32], public: [u8; 32]) -> bool {
-    let generated_pub = secret_to_public(&secret);
-    return public == generated_pub;
+    let mut generated_pub : [u8; 32]= [0; 32];
+     if Key::secret_to_public(&secret, &mut generated_pub) {
+       return public == generated_pub;
+     }
+     return false;
   }
 
   pub fn to_key_pair(secret_bytes: [u8; 32], public_bytes: [u8; 32]) -> Keypair {
@@ -84,8 +88,9 @@ impl Wallet {
   }
 
   pub fn create_keys() -> ([u8; 32], [u8; 32]) {
-    let secret: [u8; 32] = generate_secret_key();
-    let public: [u8; 32] = secret_to_public(&secret);
+    let secret: [u8; 32] = Key::generate_secret_key();
+    let mut public: [u8; 32] = [0; 32];
+    Key::secret_to_public(&secret, &mut public);
     return (secret, public);
   }
 
@@ -157,15 +162,21 @@ impl Wallet {
     let view_slice = hex::decode(view_str).expect("Wrong view str");
     let spend: [u8; 32] = Wallet::to_fixed_key(&spend_slice[..]);
     let view: [u8; 32] = Wallet::to_fixed_key(&view_slice[..]);
-    let spend_pub = secret_to_public(&spend);
-    let view_pub = secret_to_public(&view);
+    let mut spend_pub: [u8; 32] = [0; 32];
+    Key::secret_to_public(&spend, &mut spend_pub);
+    let mut view_pub: [u8; 32] = [0; 32];
+    Key::secret_to_public(&view, &mut view_pub);
+
     self.spend_keys = (spend, spend_pub);
     self.view_keys = (view, view_pub);
   }
 
   pub fn from_secret_keys(spend: [u8; 32], view: [u8; 32]) -> Wallet {
-    let spend_pub = secret_to_public(&spend);
-    let view_pub = secret_to_public(&view);
+    let mut spend_pub: [u8; 32] = [0; 32];
+    Key::secret_to_public(&spend, &mut spend_pub);
+    let mut view_pub: [u8; 32] = [0; 32];
+    Key::secret_to_public(&view, &mut view_pub);
+
     Wallet::from_pair((spend, spend_pub), (view, view_pub))
   }
 
